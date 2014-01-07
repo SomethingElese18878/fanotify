@@ -17,7 +17,6 @@ static void *run(void *data)
 	int path_len;
 	struct fanotify_response response;
 
-
 	if (-1 == (fd = fanotify_init(FAN_CLOEXEC | FAN_CLASS_CONTENT, O_RDONLY | O_LARGEFILE)))
 	{
 		perror("Cannot init");
@@ -52,11 +51,10 @@ static void *run(void *data)
 						if (path_len > 0)
 						{
 							path[path_len] = 0x00;
-		                			printf("File %s", path);
-		            			}
+							printf("File %s", path);
+						}
 
 					}
-
 					close(metadata->fd);
 				}
 				printf("\n");
@@ -64,9 +62,8 @@ static void *run(void *data)
 			metadata = FAN_EVENT_NEXT(metadata, len);
 		}
  	}
-
 	close(fd);
-    	return NULL;
+	return NULL;
 }
 
 int main(int argc, char *argv[])
@@ -74,11 +71,11 @@ int main(int argc, char *argv[])
 	pthread_attr_t attr;
 	pthread_t thread;
 	void *result;
-    
+
 	if (pthread_attr_init(&attr))
 	{
-        	return EXIT_FAILURE;
-    	}
+		return EXIT_FAILURE;
+	}
 
 	if (pthread_create(&thread, &attr, run, NULL))
 	{
