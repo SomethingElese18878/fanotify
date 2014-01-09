@@ -6,8 +6,9 @@
 #include <stdlib.h>
 #include <sys/fanotify.h>
 #include <unistd.h>
+#include <string.h>
 
-#define MAX_PATH 10
+#define MAX_MONITORED_PATH 10
 
 void monitor_path(int fd, char *path, uint64_t event_mask)
 {
@@ -57,7 +58,7 @@ void block_file_access(int fd, const struct fanotify_event_metadata *metadata, i
 
 	if (block_fa)
 	{
-		printf("\nBlock FA");
+		printf("\nBlock FA \n");
 		response.fd = metadata->fd;
 		response.response = FAN_DENY;
 		write(fd, &response, sizeof(struct fanotify_response));
@@ -69,11 +70,34 @@ void block_file_access(int fd, const struct fanotify_event_metadata *metadata, i
 	}
 }
 
+int check_file_access(int fd, const struct fanotify_event_metadata *metadata)
+{
+	int path_len;
+	char path[PATH_MAX];
+
+	sprintf(path, "/proc/self/fd/%d", metadata->fd);
+	path_len = readlink(path, path, sizeof (path) - 1);	//read content of symbolic link
+
+	if (path_len > 0)
+	{
+		path[path_len] = 0x00;
+		char *exist = strstr(path, "eicar");
+		printf("\nexist: %s", exist);
+		if (exist == NULL)
+		{
+			printf("\nCONTAINES----------");
+			return 1;
+		} else {
+			printf("\nNOTTTTTTTTTTTTTTTTTTTT");
+			return 0;
+		}
+	}
+}
 
 static void *run(void *data)
 {
 	char buf[4096];
-	char *monitored_folder[MAX_PATH] = {	"/home/norman/secure-folder/bla",
+	char *monitored_folder[MAX_MONITORED_PATH] = {	"/home/norman/secure-folder/bla",
 											"/home/norman/secure-folder/blubb",
 											"/home/norman/secure-folder/c"};
 	int fd;
@@ -112,7 +136,14 @@ static void *run(void *data)
 					{
 						block_file_access(fd, metadata, 1); // block filehandle
 						print_path(metadata);
-						block_file_access(fd, metadata, 0); // free filehandle after proved
+						int secure = check_file_access(fd, metadata);
+						if (secure)
+						{
+							printf(" : SECURE FILEACCESS\n");
+							block_file_access(fd, metadata, 0); // free filehandle after proved
+						} else {
+							printf(" : MALICIOUS - Stay blocked\n");
+						}
 					}
 					close(metadata->fd);
 				}
