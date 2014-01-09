@@ -50,7 +50,9 @@ void print_path(const struct fanotify_event_metadata *metadata)
 
 /**
   * This functions blocks or allows a file-access.
-  *	block_fa: 1: true, 0: false
+  *	@param block_fa
+  * 1: true,
+  * 0: false.
   */
 void block_file_access(int fd, const struct fanotify_event_metadata *metadata, int block_fa)
 {
@@ -59,18 +61,17 @@ void block_file_access(int fd, const struct fanotify_event_metadata *metadata, i
 	if (block_fa)
 	{
 		printf("\nBlock FA \n");
-		response.fd = metadata->fd;
 		response.response = FAN_DENY;
-		write(fd, &response, sizeof(struct fanotify_response));
 	}else{
 		printf("\nFREE FA");
-		response.fd = metadata->fd;
 		response.response = FAN_ALLOW;
-		write(fd, &response, sizeof(struct fanotify_response));
 	}
+
+	response.fd = metadata->fd;
+	write(fd, &response, sizeof(struct fanotify_response));
 }
 
-int check_file_access(int fd, const struct fanotify_event_metadata *metadata)
+int secure_file_access(int fd, const struct fanotify_event_metadata *metadata)
 {
 	int path_len;
 	char path[PATH_MAX];
@@ -85,10 +86,10 @@ int check_file_access(int fd, const struct fanotify_event_metadata *metadata)
 		printf("\nexist: %s", exist);
 		if (exist == NULL)
 		{
-			printf("\nCONTAINES----------");
+			printf("\n SECURE");
 			return 1;
 		} else {
-			printf("\nNOTTTTTTTTTTTTTTTTTTTT");
+			printf("\n MALICIOUS");
 			return 0;
 		}
 	}
@@ -106,6 +107,7 @@ static void *run(void *data)
 	static uint64_t event_mask = (	FAN_ACCESS |
 									FAN_MODIFY |
 									FAN_OPEN |
+									FAN_OPEN_PERM |
 									FAN_CLOSE |
 									FAN_ONDIR |
 									FAN_EVENT_ON_CHILD);
@@ -136,8 +138,8 @@ static void *run(void *data)
 					{
 						block_file_access(fd, metadata, 1); // block filehandle
 						print_path(metadata);
-						int secure = check_file_access(fd, metadata);
-						if (secure)
+
+						if (secure_file_access(fd, metadata))
 						{
 							printf(" : SECURE FILEACCESS\n");
 							block_file_access(fd, metadata, 0); // free filehandle after proved
