@@ -12,7 +12,6 @@ void print_path(const struct fanotify_event_metadata *metadata)
 	int path_len;
 	char path[PATH_MAX];
 
-	printf("FAN_ACCESS: ");
 	sprintf(path, "/proc/self/fd/%d", metadata->fd);
 	path_len = readlink(path, path, sizeof (path) - 1);	//read content of symbolic link
 
@@ -21,10 +20,18 @@ void print_path(const struct fanotify_event_metadata *metadata)
 		path[path_len] = 0x00;
 		printf("File %s", path);
 	}
+
+	// Print the kind of access at the end of the line.
+	if (metadata->mask & FAN_ACCESS) printf(" -> FAN_ACCESS <-");
+	if (metadata->mask & FAN_MODIFY) printf(" -> FAN_MODIFY <-");
+	if (metadata->mask & FAN_OPEN) printf(" -> FAN_OPEN <-");
+	if (metadata->mask & FAN_CLOSE) printf(" -> FAN_CLOSE <-");
+	if (metadata->mask & FAN_ONDIR) printf(" -> FAN_ONDIR <-");
+	if (metadata->mask & FAN_EVENT_ON_CHILD) printf(" -> FAN_EVENT_ON_CHILD <-");
 }
 
 /**
-  * This functions blocks an file-access.
+  * This functions blocks or allows a file-access.
   *	block_fa: 1: true, 0: false
   */
 void block_file_access(int fd, const struct fanotify_event_metadata *metadata, int block_fa)
@@ -72,10 +79,10 @@ static void *run(void *data)
 
 	/*Add specific folder - AT_FDCWD / FAN_NOFD */
 	if (-1 == (fanotify_mark(fd,
-						FAN_MARK_ADD | FAN_MARK_MOUNT,
+						FAN_MARK_ADD,
 						event_mask,
 						AT_FDCWD,
-						"."))) //"/home/norman/secure-folder"
+						"/home/norman/secure-folder")))
 	{
 		perror("Cannot mark");
 		close(fd);
