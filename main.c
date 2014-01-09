@@ -74,7 +74,8 @@ static void *run(void *data)
 {
 	char buf[4096];
 	char *monitored_folder[MAX_PATH] = {	"/home/norman/secure-folder/bla",
-											"/home/norman/secure-folder/blubb"};
+											"/home/norman/secure-folder/blubb",
+											"/home/norman/secure-folder/c"};
 	int fd;
 	int len;
 	const struct fanotify_event_metadata *metadata;
@@ -85,9 +86,8 @@ static void *run(void *data)
 									FAN_ONDIR |
 									FAN_EVENT_ON_CHILD);
 
-	pid_t ignored_pid;
-	ignored_pid = getpid();
-	printf("getPID: %d \n", ignored_pid);
+	printf("getPID: %d \n", getpid());
+	printf("getPPID: %d \n", getppid());
 
 	if (-1 == (fd = fanotify_init( FAN_CLOEXEC | FAN_CLASS_CONTENT,
 								   O_RDONLY | O_LARGEFILE)))
@@ -97,6 +97,7 @@ static void *run(void *data)
 	}
 
 	monitor_path(fd, monitored_folder[0], event_mask);
+	monitor_path(fd, monitored_folder[1], event_mask);
 
 	while (-1 != (len = read(fd, (void *) &buf, sizeof (buf))))
 	{
@@ -109,8 +110,9 @@ static void *run(void *data)
 				{
 					if (metadata->mask & event_mask)	//file accessed
 					{
+						block_file_access(fd, metadata, 1); // block filehandle
 						print_path(metadata);
-						block_file_access(fd, metadata, 0);
+						block_file_access(fd, metadata, 0); // free filehandle after proved
 					}
 					close(metadata->fd);
 				}
