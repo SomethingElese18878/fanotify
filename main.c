@@ -136,15 +136,14 @@ static void *run(void *data)
 				{
 					if (metadata->mask & event_mask)	//file accessed
 					{
-						block_file_access(fd, metadata, 1); // block filehandle
 						print_path(metadata);
-
 						if (secure_file_access(fd, metadata))
 						{
 							printf(" : SECURE FILEACCESS\n");
-							block_file_access(fd, metadata, 0); // free filehandle after proved
+							block_file_access(fd, metadata, 0); // free filedescriptor
 						} else {
 							printf(" : MALICIOUS - Stay blocked\n");
+							block_file_access(fd, metadata, 1); // block access
 						}
 					}
 					close(metadata->fd);
