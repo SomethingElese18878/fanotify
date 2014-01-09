@@ -7,6 +7,23 @@
 #include <sys/fanotify.h>
 #include <unistd.h>
 
+#define MAX_PATH 10
+
+void monitor_path(int fd, char *path, uint64_t event_mask)
+{
+	/*Add specific folder - AT_FDCWD / FAN_NOFD */
+	if (-1 == (fanotify_mark(fd,
+						FAN_MARK_ADD,
+						event_mask,
+						AT_FDCWD,
+						path)))
+	{
+		perror("Cannot mark");
+		close(fd);
+		return;
+	}
+}
+
 void print_path(const struct fanotify_event_metadata *metadata)
 {
 	int path_len;
@@ -56,6 +73,8 @@ void block_file_access(int fd, const struct fanotify_event_metadata *metadata, i
 static void *run(void *data)
 {
 	char buf[4096];
+	char *monitored_folder[MAX_PATH] = {	"/home/norman/secure-folder/bla",
+											"/home/norman/secure-folder/blubb"};
 	int fd;
 	int len;
 	const struct fanotify_event_metadata *metadata;
@@ -77,17 +96,7 @@ static void *run(void *data)
 		return NULL;
 	}
 
-	/*Add specific folder - AT_FDCWD / FAN_NOFD */
-	if (-1 == (fanotify_mark(fd,
-						FAN_MARK_ADD,
-						event_mask,
-						AT_FDCWD,
-						"/home/norman/secure-folder")))
-	{
-		perror("Cannot mark");
-		close(fd);
-		return NULL;
-	}
+	monitor_path(fd, monitored_folder[0], event_mask);
 
 	while (-1 != (len = read(fd, (void *) &buf, sizeof (buf))))
 	{
